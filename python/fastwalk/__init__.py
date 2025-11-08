@@ -1,6 +1,3 @@
-from .fastwalk import *
+import fastwalk._core as core  # ty: ignore[unresolved-import]
 
-
-__doc__ = fastwalk.__doc__
-if hasattr(fastwalk, "__all__"):
-    __all__ = fastwalk.__all__
+sum_as_string = core.sum_as_string
