@@ -1,3 +1,4 @@
+.codspeed
 .benchmarks/
 .claude/settings.local.json
 /target
