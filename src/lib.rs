@@ -142,7 +142,6 @@ fn walk(
                 match result {
                     Ok(entry) => {
                         let path = entry.path();
-                        let file_type = entry.file_type();
 
                         // Apply glob filters if present
                         if let Some(ref glob_set) = glob_matcher
@@ -151,6 +150,7 @@ fn walk(
                             return ignore::WalkState::Continue;
                         }
 
+                        let file_type = entry.file_type();
                         let dir_entry = DirEntry {
                             path: path.to_string_lossy().to_string(),
                             is_file: file_type.as_ref().is_some_and(|ft| ft.is_file()),
