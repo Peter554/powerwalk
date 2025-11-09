@@ -6,7 +6,7 @@ _default:
 check: test lint
 
 # Compile the Rust extension in debug mode
-compile:
+compile-dev:
     @uv run maturin develop
 
 # Compile the Rust extension in release mode
@@ -20,7 +20,7 @@ fmt:
 
 # Run all tests
 [group('test')]
-test: compile test-rs test-py
+test: compile-dev test-rs test-py
 
 # Run Rust tests
 [group('test')]
@@ -72,12 +72,12 @@ fix-py:
 
 # Build documentation
 [group('docs')]
-docs-build: compile
+docs-build: compile-dev
     @uv run pdoc speedywalk -o docs/
 
 # Serve documentation locally
 [group('docs')]
-docs-serve: compile
+docs-serve: compile-dev
     @uv run pdoc speedywalk
 
 # Publish a new version. Usage: just publish patch|minor|major
@@ -87,6 +87,7 @@ publish MODE:
     just check
     just _check-uncommitted-changes
     cargo bump {{MODE}}
+    just compile-dev
     git add --all
     git commit -m "Bump version v`just _get-version`"
     git tag "v`just _get-version`"
