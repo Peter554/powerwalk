@@ -73,12 +73,12 @@ fix-py:
 # Build documentation
 [group('docs')]
 docs-build: compile
-    @uv run pdoc speedywalk -o docs/
+    @uv run pdoc fast_walk -o docs/
 
 # Serve documentation locally
 [group('docs')]
 docs-serve: compile
-    @uv run pdoc speedywalk
+    @uv run pdoc fast_walk
 
 # Publish a new version. Usage: just publish patch|minor|major
 [group('publish')]
