@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::thread;
 
 use crossbeam::channel;
-use globset::{Glob, GlobSetBuilder};
+use globset::GlobSetBuilder;
 use ignore::WalkBuilder;
 use pyo3::prelude::*;
 
@@ -92,7 +92,9 @@ fn walk(
     let filter_glob_matcher = if !filter.is_empty() {
         let mut glob_builder = GlobSetBuilder::new();
         for pattern in &filter {
-            let glob = Glob::new(pattern)
+            let glob = globset::GlobBuilder::new(pattern)
+                .literal_separator(true)
+                .build()
                 .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
             glob_builder.add(glob);
         }
@@ -107,7 +109,9 @@ fn walk(
     let exclude_glob_matcher = if !exclude.is_empty() {
         let mut glob_builder = GlobSetBuilder::new();
         for pattern in &exclude {
-            let glob = Glob::new(pattern)
+            let glob = globset::GlobBuilder::new(pattern)
+                .literal_separator(true)
+                .build()
                 .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
             glob_builder.add(glob);
         }
@@ -121,9 +125,15 @@ fn walk(
     // Apply exclude filter if patterns are provided
     if let Some(ref glob) = exclude_glob_matcher {
         let glob = glob.clone();
+        let root_for_exclude = root_path.clone();
         builder.filter_entry(move |entry| {
             // Exclude entries that match any exclude pattern
-            !glob.is_match(entry.path())
+            // Use relative path for glob matching
+            let relative_path = entry
+                .path()
+                .strip_prefix(&root_for_exclude)
+                .unwrap_or(entry.path());
+            !glob.is_match(relative_path)
         });
     }
 
@@ -131,19 +141,26 @@ fn walk(
     // Buffer size of 10000 provides good throughput while limiting memory usage
     let (sender, receiver) = channel::bounded(10000);
 
+    // Clone root path for use in the closure
+    let root_for_matching = root_path.clone();
+
     // Spawn a thread to do the walking
     thread::spawn(move || {
         builder.build_parallel().run(|| {
             let sender = sender.clone();
             let filter_glob_matcher = filter_glob_matcher.clone();
+            let root_for_matching = root_for_matching.clone();
             Box::new(move |result| {
                 match result {
                     Ok(entry) => {
                         let path = entry.path();
 
+                        // Get relative path for glob matching
+                        let relative_path = path.strip_prefix(&root_for_matching).unwrap_or(path);
+
                         // Apply glob filters if present
                         if let Some(ref glob) = filter_glob_matcher
-                            && !glob.is_match(path)
+                            && !glob.is_match(relative_path)
                         {
                             return ignore::WalkState::Continue;
                         }

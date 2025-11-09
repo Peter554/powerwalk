@@ -53,7 +53,7 @@ def test_benchmark_walk_with_filter(benchmark, large_directory):
     """Benchmark walking with a single filter."""
 
     def walk_filtered():
-        return list(speedywalk.walk(large_directory, filter="*.py"))
+        return list(speedywalk.walk(large_directory, filter="**/*.py"))
 
     result = benchmark(walk_filtered)
     assert len(result) == 4854

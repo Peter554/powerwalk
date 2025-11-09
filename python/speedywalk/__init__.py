@@ -64,12 +64,17 @@ def walk(
     ## Example
 
     ```python
-    for entry in walk(".", filter="*.py", max_depth=2):
+    # Match .py files at any depth (use ** for recursive matching)
+    for entry in walk(".", filter="**/*.py", max_depth=2):
         if entry.is_file:
             print(entry.path)
 
+    # Match only root-level .py files (no ** means current directory only)
+    for entry in walk(".", filter="*.py"):
+        print(entry.path)
+
     # Exclude patterns
-    for entry in walk(".", filter="*.py", exclude=["**/test_*", "**/__pycache__"]):
+    for entry in walk(".", filter="**/*.py", exclude=["**/test_*", "**/__pycache__"]):
         print(entry.path)
     ```
     """

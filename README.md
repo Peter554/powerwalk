@@ -29,14 +29,14 @@ pip install speedywalk
 import speedywalk
 
 # Find all Python files, respecting .gitignore
-for entry in speedywalk.walk(".", filter="*.py"):
+for entry in speedywalk.walk(".", filter="**/*.py"):
     if entry.is_file:
         print(entry.path)
 
 # Custom configuration with filtering and exclusion
 for entry in speedywalk.walk(
     ".",
-    filter=["*.yaml", "*.yml"],
+    filter=["**/*.yaml", "**/*.yml"],
     exclude=["**/node_modules", "**/__pycache__"],
     max_depth=3,
     threads=4,

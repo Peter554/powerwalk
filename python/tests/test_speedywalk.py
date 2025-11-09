@@ -73,7 +73,7 @@ def test_filter_collection(tmp_path):
 
 
 def test_filter_nested_directories(tmp_path):
-    """Test that filter work in nested directories."""
+    """Test that filter work in nested directories with ** pattern."""
     create_file(tmp_path / "root.py")
     create_file(tmp_path / "root.txt")
     create_file(tmp_path / "level1/file1.py")
@@ -81,7 +81,8 @@ def test_filter_nested_directories(tmp_path):
     create_file(tmp_path / "level1/level2/file2.py")
     create_file(tmp_path / "level1/level2/file2.txt")
 
-    entries = list(speedywalk.walk(tmp_path, filter="*.py"))
+    # Use **/*.py to match files at any depth
+    entries = list(speedywalk.walk(tmp_path, filter="**/*.py"))
     paths = {entry.path_str for entry in entries}
 
     assert str(tmp_path / "root.py") in paths
@@ -276,10 +277,96 @@ def test_combined_filter_and_exclude(tmp_path):
     create_file(tmp_path / "exclude/file.py")
     create_file(tmp_path / "exclude/file.txt")
 
-    entries = list(speedywalk.walk(tmp_path, filter="*.py", exclude="**/exclude"))
+    # Use **/*.py to match all .py files, exclude the exclude directory
+    entries = list(speedywalk.walk(tmp_path, filter="**/*.py", exclude="**/exclude"))
     paths = {entry.path_str for entry in entries}
 
     assert str(tmp_path / "include/file.py") in paths
     assert str(tmp_path / "include/file.txt") not in paths
     assert str(tmp_path / "exclude/file.py") not in paths
     assert str(tmp_path / "exclude/file.txt") not in paths
+
+
+def test_filter_literal_separator(tmp_path):
+    """Test that filter patterns respect literal separators.
+
+    Without **, patterns should only match in the immediate directory.
+    """
+    create_file(tmp_path / "root.py")
+    create_file(tmp_path / "root.txt")
+    create_file(tmp_path / "subdir/nested.py")
+    create_file(tmp_path / "subdir/nested.txt")
+
+    # *.py should only match root-level .py files
+    entries = list(speedywalk.walk(tmp_path, filter="*.py"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "root.py") in paths
+    assert str(tmp_path / "subdir/nested.py") not in paths
+    assert str(tmp_path / "root.txt") not in paths
+
+    # **/*.py should match .py files at any depth
+    entries = list(speedywalk.walk(tmp_path, filter="**/*.py"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "root.py") in paths
+    assert str(tmp_path / "subdir/nested.py") in paths
+    assert str(tmp_path / "root.txt") not in paths
+
+
+def test_exclude_literal_separator(tmp_path):
+    """Test that exclude patterns respect literal separators.
+
+    Without **, patterns should only exclude in the immediate directory.
+    """
+    create_file(tmp_path / "keep.txt")
+    create_file(tmp_path / "skip.txt")
+    create_file(tmp_path / "subdir/keep.txt")
+    create_file(tmp_path / "subdir/skip.txt")
+
+    # skip.txt should only exclude root-level skip.txt
+    entries = list(speedywalk.walk(tmp_path, exclude="skip.txt"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "keep.txt") in paths
+    assert str(tmp_path / "skip.txt") not in paths
+    assert str(tmp_path / "subdir/keep.txt") in paths
+    assert str(tmp_path / "subdir/skip.txt") in paths  # Not excluded (in subdir)
+
+    # **/skip.txt should exclude skip.txt at any depth
+    entries = list(speedywalk.walk(tmp_path, exclude="**/skip.txt"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "keep.txt") in paths
+    assert str(tmp_path / "skip.txt") not in paths
+    assert str(tmp_path / "subdir/keep.txt") in paths
+    assert str(tmp_path / "subdir/skip.txt") not in paths  # Excluded
+
+
+def test_filter_and_exclude_with_literal_separator(tmp_path):
+    """Test that both filter and exclude respect literal separators together."""
+    create_file(tmp_path / "root.py")
+    create_file(tmp_path / "test.py")
+    create_file(tmp_path / "subdir/nested.py")
+    create_file(tmp_path / "subdir/test.py")
+    create_file(tmp_path / "subdir/deep/test.py")
+
+    # Use **/*.py to match all .py files, but exclude test.py at root only
+    entries = list(speedywalk.walk(tmp_path, filter="**/*.py", exclude="test.py"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "root.py") in paths
+    assert str(tmp_path / "test.py") not in paths  # Excluded at root
+    assert str(tmp_path / "subdir/nested.py") in paths
+    assert str(tmp_path / "subdir/test.py") in paths  # Not excluded (in subdir)
+    assert str(tmp_path / "subdir/deep/test.py") in paths  # Not excluded (in subdir)
+
+    # Use **/test.py to exclude test.py at any depth
+    entries = list(speedywalk.walk(tmp_path, filter="**/*.py", exclude="**/test.py"))
+    paths = {entry.path_str for entry in entries}
+
+    assert str(tmp_path / "root.py") in paths
+    assert str(tmp_path / "test.py") not in paths
+    assert str(tmp_path / "subdir/nested.py") in paths
+    assert str(tmp_path / "subdir/test.py") not in paths  # Excluded
+    assert str(tmp_path / "subdir/deep/test.py") not in paths  # Excluded
